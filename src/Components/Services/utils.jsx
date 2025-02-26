@@ -22,5 +22,5 @@ export const calculateDistance = (lat1, lon1, lat2, lon2) => {
   
   export const formatTime = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
   };

@@ -7,7 +7,7 @@ import airportData from 'airport-data';
 import moment from 'moment';
 
 const aircraftSpecs = {
-  CRJ700: { paxCapacity: 70, speed: 447, range: 1430 },
+  CRJ700: { paxCapacity: 70, speed: 447, range: 770 },
   'B737-8': { paxCapacity: 189, speed: 460, range: 3500 },
   'B787-8': { paxCapacity: 242, speed: 488, range: 7300 },
   'A350-900': { paxCapacity: 325, speed: 488, range: 8100 },
@@ -229,10 +229,26 @@ const FlightPlanner = () => {
     const maxLegs = 5;
     let attempts = 0;
     const maxAttempts = 50; // Prevent infinite loop
+    const maxFlightTimeMinutes = 180;
+    const maxDistanceNm = (maxFlightTimeMinutes / 60) * 460; // Assuming average speed of 460 knots
 
     while (newLegs.length < maxLegs && attempts < maxAttempts) {
-      const destination = airportData
-        .filter(airport => airport.icao !== currentOrigin)
+      const potentialDestinations = airportData.filter(airport => {
+        const distanceKm = calculateDistance(
+          airport.latitude, airport.longitude,
+          airportData.find(a => a.icao === currentOrigin).latitude,
+          airportData.find(a => a.icao === currentOrigin).longitude
+        );
+        const distanceNm = distanceKm / 1.852;
+        return distanceNm <= maxDistanceNm;
+      });
+
+      if (potentialDestinations.length === 0) {
+        attempts++;
+        continue;
+      }
+
+      const destination = potentialDestinations
         .map(airport => airport.icao)
         .sort(() => Math.random() - 0.5)[0];
 
@@ -265,10 +281,11 @@ const FlightPlanner = () => {
       const groundTimeMinutes = Math.floor(Math.random() * 21) + 40;
       const nextDepartureTime = arrivalTime.clone().add(groundTimeMinutes, 'minutes');
 
-      if (nextDepartureTime.isAfter(moment('2025-02-24T18:00'))) {
+      if (nextDepartureTime.hour() > 18 || (nextDepartureTime.hour() === 18 && nextDepartureTime.minute() > 0)) {
         attempts++;
         continue;
       }
+      
 
       const paxCount = Math.floor(Math.random() * aircraftData.paxCapacity * 0.9) + 1;
       const legPassengers = generatePassengers(currentOrigin, destination, paxCount);
