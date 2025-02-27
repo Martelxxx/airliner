@@ -17,9 +17,9 @@ const calculatePricing = (aircraft, distance) => {
 
   const basePrice = basePricePerKm[aircraft] * distance;
   return {
-    economy: (basePrice * 0.85).toFixed(2),
-    business: (basePrice * 1.9).toFixed(2),
-    firstClass: (basePrice * 3.5).toFixed(2),
+    economy: (basePrice * 1).toFixed(2),
+    business: (basePrice * 2).toFixed(2),
+    firstClass: (basePrice * 3).toFixed(2),
   };
 };
 
@@ -40,12 +40,13 @@ const getRandomTerminalAndGate = () => {
 const FlightLegSummary = () => {
   const { legs, airportDetails } = useContext(FlightPlannerContext);
 
-  // Function to get airport name and city from ICAO
+  // Function to get airport name, city, and country from ICAO
   const getAirportInfo = (icao) => {
     const airport = airportData.find(a => a.icao === icao);
     return {
       name: airport ? airport.name : 'Unknown Airport',
       city: airport ? airport.city : 'Unknown City',
+      country: airport ? airport.country : 'Unknown Country',
     };
   };
 
@@ -78,21 +79,18 @@ const FlightLegSummary = () => {
                   <p><strong>Aircraft:</strong> {leg.aircraft}</p>
                   <p><strong>Check-in Time:</strong> {checkInTime}</p>
                   <p><strong>Boarding Time:</strong> {boardingTime}</p>
-                  <p><strong>Origin:</strong> {leg.origin} ({originInfo.name}, {originInfo.city})</p>
-                  <p><strong>Destination:</strong> {leg.destination} ({destinationInfo.name}, {destinationInfo.city})</p>
-
+                  <p><strong>Departure Terminal/Gate:</strong> {departureTerminalGate.terminal}/{departureTerminalGate.gate}</p>
+                  <p><strong>Arrival Terminal/Gate:</strong> {arrivalTerminalGate.terminal}/{arrivalTerminalGate.gate}</p>
                 </div>
                 <div className="column">
                   <p><strong>Meal Service:</strong> {mealService}</p>
                   <p><strong>Scheduled Departure Time:</strong> {formatTime(leg.departureTime)}</p>
                   <p><strong>Scheduled Time of Arrival (STA):</strong> {formatTime(leg.arrivalTime)}</p>
-                  <p><strong>Departure Terminal/Gate:</strong> {departureTerminalGate.terminal}/{departureTerminalGate.gate}</p>
-                  <p><strong>Arrival Terminal/Gate:</strong> {arrivalTerminalGate.terminal}/{arrivalTerminalGate.gate}</p>
-                  
-                  
+                  <p><strong>Origin:</strong> {leg.origin} ({originInfo.name}, {originInfo.city}, {originInfo.country})</p>
+                  <p><strong>Destination:</strong> {leg.destination} ({destinationInfo.name}, {destinationInfo.city}, {destinationInfo.country})</p>
                 </div>
                 <div className="column">
-                                   {nextLeg && <p><strong>Layover Time:</strong> {formatFlightTime(layoverTime)}</p>}
+                  {nextLeg && <p><strong>Layover Time:</strong> {formatFlightTime(layoverTime)}</p>}
                   <p><strong>Distance:</strong> {Math.round(leg.distance)} km</p>
                   <p><strong>Fuel Required:</strong> {leg.fuelConsumption} kg</p>
                   <p><strong>Fuel Cost:</strong> ${fuelCost}</p>

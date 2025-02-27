@@ -8,6 +8,7 @@ import AircraftInfo from './Components/MainContent/AircraftInfo/AircraftInfo';
 import PaymentManagement from './Components/MainContent/PaymentManagement/PaymentManagement';
 import PassengerSimulator from './Components/MainContent/PassengerSimulator/PassengerSimulator';
 import { FlightPlannerProvider } from './Components/MainContent/FlightPlanner/FlightPlannerContext';
+import ETACalculator from './Components/MainContent/FlightPlanner/LegDetails/ETACalculator';
 
 const App = () => {
   return (
@@ -21,6 +22,7 @@ const App = () => {
               <Routes>
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/flight-planner" element={<FlightPlanner />} />
+                <Route path="/eta-calculator" element={<ETACalculator />} />
                 <Route path="/aircraft-info" element={<AircraftInfo />} />
                 <Route path="/payment-management" element={<PaymentManagement />} />
                 <Route path="/passenger-simulator" element={<PassengerSimulator />} />
