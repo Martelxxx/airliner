@@ -2,7 +2,7 @@
 import React, { useContext, useState } from 'react';
 import LegDetails from '../../MainContent/FlightPlanner/LegDetails/LegDetails';
 import { FlightPlannerContext } from './FlightPlannerContext';
-import { calculateDistance } from '../../Services/utils';
+import { calculateDistance, formatFlightTime } from '../../Services/utils';
 import airportData from 'airport-data';
 import moment from 'moment';
 
@@ -11,6 +11,34 @@ const aircraftSpecs = {
   'B737-8': { paxCapacity: 189, speed: 460, range: 3500 },
   'B787-8': { paxCapacity: 242, speed: 488, range: 7300 },
   'A350-900': { paxCapacity: 325, speed: 488, range: 8100 },
+};
+
+const fuelConsumption = {
+  CRJ700: { 49: 2651, 88: 2603, 103: 2577, 381: 3566, 806: 4059, 1442: 5786 },
+  'B737-8': { 49: 4248, 88: 3685, 103: 4564, 381: 5405, 806: 6710, 1442: 9549 },
+  'B787-8': { 49: 7406, 88: 6424, 103: 7976, 381: 9757, 806: 12098, 1442: 15861 },
+  'A350-900': { 49: 8719, 88: 7671, 103: 9299, 381: 11060, 806: 14468, 1442: 19429 },
+};
+
+const distances = [49, 88, 103, 381, 806, 1442]; // Reference distances in nm
+const FUEL_PRICE_PER_KG = 0.80; // $0.80/kg, adjustable
+
+// Linear interpolation for fuel consumption
+const interpolateFuel = (aircraft, distance) => {
+  const data = fuelConsumption[aircraft];
+  if (distance <= distances[0]) return data[distances[0]];
+  if (distance >= distances[distances.length - 1]) return data[distances[distances.length - 1]];
+
+  for (let i = 0; i < distances.length - 1; i++) {
+    if (distance >= distances[i] && distance <= distances[i + 1]) {
+      const x0 = distances[i];
+      const x1 = distances[i + 1];
+      const y0 = data[x0];
+      const y1 = data[x1];
+      return y0 + (y1 - y0) * (distance - x0) / (x1 - x0);
+    }
+  }
+  return 0; // Shouldn’t reach here with valid distances
 };
 
 const namesByRegion = {
@@ -219,8 +247,26 @@ const formatTime = (hours) => {
 };
 
 const FlightPlanner = () => {
-  const { legs, setLegs } = useContext(FlightPlannerContext);
+  const { legs, setLegs, setAirportDetails } = useContext(FlightPlannerContext);
   const [startingICAO, setStartingICAO] = useState('');
+
+  const fetchAirportDetails = (icao) => {
+    const airport = airportData.find(a => a.icao === icao);
+    if (airport) {
+      setAirportDetails({
+        name: airport.name,
+        longestRunway: airport.runways ? Math.max(...airport.runways.map(r => r.length)) : 'N/A',
+      });
+    } else {
+      setAirportDetails(null);
+    }
+  };
+
+  const handleICAOChange = (e) => {
+    const icao = e.target.value.toUpperCase();
+    setStartingICAO(icao);
+    fetchAirportDetails(icao);
+  };
 
   const generateSchedule = () => {
     let currentOrigin = startingICAO;
@@ -228,9 +274,7 @@ const FlightPlanner = () => {
     const newLegs = [];
     const maxLegs = 5;
     let attempts = 0;
-    const maxAttempts = 50; // Prevent infinite loop
-    const maxFlightTimeMinutes = 180;
-    const maxDistanceNm = (maxFlightTimeMinutes / 60) * 460; // Assuming average speed of 460 knots
+    const maxAttempts = 50;
 
     while (newLegs.length < maxLegs && attempts < maxAttempts) {
       const potentialDestinations = airportData.filter(airport => {
@@ -240,7 +284,7 @@ const FlightPlanner = () => {
           airportData.find(a => a.icao === currentOrigin).longitude
         );
         const distanceNm = distanceKm / 1.852;
-        return distanceNm <= maxDistanceNm;
+        return distanceNm <= aircraftSpecs['B737-8'].speed * 3; // Max 3-hour flight with B737-8 speed
       });
 
       if (potentialDestinations.length === 0) {
@@ -281,11 +325,10 @@ const FlightPlanner = () => {
       const groundTimeMinutes = Math.floor(Math.random() * 21) + 40;
       const nextDepartureTime = arrivalTime.clone().add(groundTimeMinutes, 'minutes');
 
-      if (nextDepartureTime.hour() > 18 || (nextDepartureTime.hour() === 18 && nextDepartureTime.minute() > 0)) {
+      if (nextDepartureTime.isAfter(moment('2025-02-24T18:00'))) {
         attempts++;
         continue;
       }
-      
 
       const paxCount = Math.floor(Math.random() * aircraftData.paxCapacity * 0.9) + 1;
       const legPassengers = generatePassengers(currentOrigin, destination, paxCount);
@@ -301,16 +344,17 @@ const FlightPlanner = () => {
         distance: distanceNm,
         passengers: legPassengers,
         paxCount,
+        fuelConsumption: Math.round(interpolateFuel(selectedAircraft, distanceNm)), // Fuel in kg
       };
 
       newLegs.push(leg);
       currentOrigin = destination;
       currentDepartureTime = nextDepartureTime;
-      attempts = 0; // Reset attempts on success
+      attempts = 0; // Reset on success
     }
 
     if (newLegs.length < maxLegs) {
-      console.warn(`Only generated ${newLegs.length} legs due to time constraints`);
+      console.warn(`Only generated ${newLegs.length} legs after ${attempts} attempts`);
     }
     setLegs(newLegs);
   };
@@ -321,7 +365,7 @@ const FlightPlanner = () => {
       <div>
         <label>
           Starting Airport (ICAO):
-          <input type="text" value={startingICAO} onChange={(e) => setStartingICAO(e.target.value)} />
+          <input type="text" value={startingICAO} onChange={handleICAOChange} />
         </label>
         <button onClick={generateSchedule}>Generate Flight Schedule</button>
       </div>

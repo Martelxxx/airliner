@@ -1,7 +1,11 @@
+// src/Components/FlightLegSummary.jsx
 import React, { useContext } from 'react';
 import { FlightPlannerContext } from '../../MainContent/FlightPlanner/FlightPlannerContext';
 import { formatTime, formatFlightTime } from '../../Services/utils';
 import moment from 'moment';
+import airportData from 'airport-data';
+
+const FUEL_PRICE_PER_KG = 0.80; // $0.80/kg, adjustable
 
 const calculatePricing = (aircraft, distance) => {
   const basePricePerKm = {
@@ -13,9 +17,9 @@ const calculatePricing = (aircraft, distance) => {
 
   const basePrice = basePricePerKm[aircraft] * distance;
   return {
-    economy: (basePrice * 1).toFixed(2),
-    business: (basePrice * 2).toFixed(2),
-    firstClass: (basePrice * 3).toFixed(2),
+    economy: (basePrice * 0.85).toFixed(2),
+    business: (basePrice * 1.9).toFixed(2),
+    firstClass: (basePrice * 3.5).toFixed(2),
   };
 };
 
@@ -34,11 +38,21 @@ const getRandomTerminalAndGate = () => {
 };
 
 const FlightLegSummary = () => {
-  const { legs } = useContext(FlightPlannerContext);
+  const { legs, airportDetails } = useContext(FlightPlannerContext);
+
+  // Function to get airport name and city from ICAO
+  const getAirportInfo = (icao) => {
+    const airport = airportData.find(a => a.icao === icao);
+    return {
+      name: airport ? airport.name : 'Unknown Airport',
+      city: airport ? airport.city : 'Unknown City',
+    };
+  };
 
   return (
     <div className="flight-leg-summary">
       <h2>Flight Leg Summary</h2>
+      
       {legs.length === 0 ? (
         <p>No legs available</p>
       ) : (
@@ -52,6 +66,10 @@ const FlightLegSummary = () => {
           const checkInTime = moment(leg.departureTime).subtract(2, 'hours').format('hh:mm A');
           const boardingTime = moment(leg.departureTime).subtract(45, 'minutes').format('hh:mm A');
 
+          const originInfo = getAirportInfo(leg.origin);
+          const destinationInfo = getAirportInfo(leg.destination);
+          const fuelCost = (leg.fuelConsumption * FUEL_PRICE_PER_KG).toFixed(2);
+
           return (
             <div key={index} className="leg-itinerary">
               <h3>Leg {index + 1}</h3>
@@ -60,25 +78,28 @@ const FlightLegSummary = () => {
                   <p><strong>Aircraft:</strong> {leg.aircraft}</p>
                   <p><strong>Check-in Time:</strong> {checkInTime}</p>
                   <p><strong>Boarding Time:</strong> {boardingTime}</p>
-                    <p><strong>Origin:</strong> {leg.origin}</p>
-                    <p><strong>Destination:</strong> {leg.destination}</p>
+                  <p><strong>Origin:</strong> {leg.origin} ({originInfo.name}, {originInfo.city})</p>
+                  <p><strong>Destination:</strong> {leg.destination} ({destinationInfo.name}, {destinationInfo.city})</p>
+
                 </div>
                 <div className="column">
-                  <p><strong>Departure Terminal/Gate:</strong> {departureTerminalGate.terminal}/{departureTerminalGate.gate}</p>
+                  <p><strong>Meal Service:</strong> {mealService}</p>
                   <p><strong>Scheduled Departure Time:</strong> {formatTime(leg.departureTime)}</p>
-                  <p><strong>Arrival Terminal/Gate:</strong> {arrivalTerminalGate.terminal}/{arrivalTerminalGate.gate}</p>
                   <p><strong>Scheduled Time of Arrival (STA):</strong> {formatTime(leg.arrivalTime)}</p>
-                  {nextLeg && <p><strong>Layover Time:</strong> {formatFlightTime(layoverTime)}</p>}
+                  <p><strong>Departure Terminal/Gate:</strong> {departureTerminalGate.terminal}/{departureTerminalGate.gate}</p>
+                  <p><strong>Arrival Terminal/Gate:</strong> {arrivalTerminalGate.terminal}/{arrivalTerminalGate.gate}</p>
+                  
+                  
                 </div>
                 <div className="column">
-                  
+                                   {nextLeg && <p><strong>Layover Time:</strong> {formatFlightTime(layoverTime)}</p>}
                   <p><strong>Distance:</strong> {Math.round(leg.distance)} km</p>
+                  <p><strong>Fuel Required:</strong> {leg.fuelConsumption} kg</p>
+                  <p><strong>Fuel Cost:</strong> ${fuelCost}</p>
                   <div className="pricing">
                     <p><strong>Economy:</strong> ${pricing.economy}</p>
                     <p><strong>Business:</strong> ${pricing.business}</p>
                     <p><strong>First Class:</strong> ${pricing.firstClass}</p>
-                    <p><strong>Meal Service:</strong> {mealService}</p>
-
                   </div>
                 </div>
               </div>
@@ -91,7 +112,6 @@ const FlightLegSummary = () => {
           font-family: Arial, sans-serif;
           padding: 20px;
         }
-
         .leg-itinerary {
           border: 2px solid #333;
           border-radius: 8px;
@@ -100,7 +120,6 @@ const FlightLegSummary = () => {
           background-color: #fff;
           box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
-
         .leg-itinerary h3 {
           margin-top: 0;
           font-size: 1.2em;
@@ -108,26 +127,21 @@ const FlightLegSummary = () => {
           padding-bottom: 8px;
           margin-bottom: 16px;
         }
-
         .itinerary-columns {
           display: flex;
           justify-content: space-between;
         }
-
         .column {
           flex: 1;
           padding: 0 10px;
         }
-
         .leg-itinerary p {
           margin: 8px 0;
           font-size: 0.9em;
         }
-
         .pricing {
           margin-top: 12px;
         }
-
         .pricing p {
           margin: 4px 0;
           font-size: 0.9em;

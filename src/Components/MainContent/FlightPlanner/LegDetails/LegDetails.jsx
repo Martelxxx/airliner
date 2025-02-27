@@ -18,6 +18,7 @@ const LegDetails = ({ legs }) => (
             <p><span className="label">ETA:</span> {moment(leg.arrivalTime).format('HH:mm')}</p>
             <p><span className="label">Flight Time:</span> {leg.flightTime}</p>
             <p><span className="label">Block Time:</span> {leg.blockTime}</p>
+            <p><span className="label">Fuel Required:</span> {leg.fuelConsumption} kg</p>
             <p><span className="label">Passenger Count:</span> {leg.paxCount}</p>
           </div>
           <div className="passenger-list">
@@ -59,7 +60,7 @@ const LegDetails = ({ legs }) => (
       }
       .leg-details {
         display: grid;
-        grid-template-columns: 175px 1fr;
+        grid-template-columns: 150px 1fr;
         gap: 5px;
         margin-bottom: 10px;
       }

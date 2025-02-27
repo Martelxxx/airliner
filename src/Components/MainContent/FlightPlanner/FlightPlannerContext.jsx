@@ -1,4 +1,3 @@
-// src/Components/FlightPlanner/FlightPlannerContext.jsx
 import React, { createContext, useState } from 'react';
 
 export const FlightPlannerContext = createContext();
@@ -12,6 +11,7 @@ export const FlightPlannerProvider = ({ children }) => {
   const [flightTime, setFlightTime] = useState(0);
   const [arrivalTime, setArrivalTime] = useState('');
   const [passengers, setPassengers] = useState([]);
+  const [airportDetails, setAirportDetails] = useState(null);
 
   return (
     <FlightPlannerContext.Provider
@@ -19,7 +19,7 @@ export const FlightPlannerProvider = ({ children }) => {
         legs, setLegs, origin, setOrigin, destination, setDestination,
         aircraft, setAircraft, departureTime, setDepartureTime,
         flightTime, setFlightTime, arrivalTime, setArrivalTime,
-        passengers, setPassengers,
+        passengers, setPassengers, airportDetails, setAirportDetails,
       }}
     >
       {children}
