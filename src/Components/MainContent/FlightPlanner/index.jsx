@@ -7,7 +7,7 @@ import airportData from 'airport-data';
 import moment from 'moment';
 
 const aircraftSpecs = {
-  CRJ700: { paxCapacity: 70, speed: 447, range: 770 },
+  CRJ700: { paxCapacity: 70, speed: 447, range: 970 },
   'B737-8': { paxCapacity: 189, speed: 460, range: 3500 },
   'B787-8': { paxCapacity: 242, speed: 488, range: 7300 },
   'A350-900': { paxCapacity: 325, speed: 488, range: 8100 },

@@ -11,7 +11,7 @@ const aircraftSpecs = {
   'A350-900': { speed: 488 },
 };
 
-const TAXI_TIME_MINUTES = 48; // 20 minutes for taxiing, added to ETA only
+const TAXI_TIME_MINUTES = 48; // 48 minutes for taxiing, added to ETA only
 
 const ETACalculator = () => {
   const { legs } = useContext(FlightPlannerContext);
@@ -30,7 +30,7 @@ const ETACalculator = () => {
       const leg = legs[legIndex];
       setDepartureTime(moment(leg.departureTime).format('hh:mm A'));
       setSta(moment(leg.arrivalTime).format('hh:mm A')); // STA unchanged
-      setTotalDistance(leg.distance.toString());
+      setTotalDistance(Math.round(leg.distance).toString()); // Round to remove decimals
     } else {
       setDepartureTime('');
       setSta('');
@@ -59,8 +59,8 @@ const ETACalculator = () => {
     return {
       expectedTime35: depMoment.clone().add(timeAt35Percent, 'minutes').format('hh:mm A'),
       expectedTime70: depMoment.clone().add(timeAt70Percent, 'minutes').format('hh:mm A'),
-      expectedDistance35: (totalDistance * 0.65).toFixed(0),
-      expectedDistance70: (totalDistance * 0.30).toFixed(0),
+      expectedDistance35: Math.round(totalDistance * 0.65).toString(), // No decimals
+      expectedDistance70: Math.round(totalDistance * 0.30).toString(), // No decimals
       flightTime: `${hours}h ${minutes}m`,
     };
   };
@@ -153,8 +153,9 @@ const ETACalculator = () => {
           <input
             type="number"
             value={totalDistance}
-            onChange={(e) => setTotalDistance(e.target.value)}
+            onChange={(e) => setTotalDistance(Math.round(e.target.value).toString())} // Ensure no decimals
             placeholder="e.g., 600"
+            step="1" // Restrict to integers
             disabled={selectedLeg !== ''}
           />
         </label>
@@ -191,12 +192,12 @@ const ETACalculator = () => {
         <p><strong>Scheduled Time of Arrival (STA):</strong> {sta}</p>
         <p><strong>Flight Time:</strong> {flightTime || 'N/A'}</p>
         <p><strong>Calculated ETA:</strong> {adjustedETA ? `${adjustedETA} (${etaLabel})` : 'N/A'}</p>
-        {/* {eta35 && (
+        {eta35 && (
           <p><em>ETA at 35%:</em> {eta35}</p>
         )}
         {eta70 && (
           <p><em>ETA at 70%:</em> {eta70}</p>
-        )} */}
+        )}
       </div>
       <style jsx>{`
         .eta-calculator {
