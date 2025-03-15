@@ -14,7 +14,7 @@ const aircraftSpecs = {
 const TAXI_TIME_MINUTES = 48; // 48 minutes for taxiing, added to ETA only
 
 const ETACalculator = () => {
-  const { legs } = useContext(FlightPlannerContext);
+  const { legs, singleLeg } = useContext(FlightPlannerContext);
   const [selectedLeg, setSelectedLeg] = useState('');
   const [departureTime, setDepartureTime] = useState('');
   const [distance35, setDistance35] = useState('');
@@ -24,14 +24,23 @@ const ETACalculator = () => {
 
   // Handle leg selection
   const handleLegChange = (e) => {
-    const legIndex = e.target.value;
-    setSelectedLeg(legIndex);
-    if (legIndex !== '') {
+    const value = e.target.value;
+    setSelectedLeg(value);
+
+    if (value === 'chartered' && singleLeg) {
+      // Handle single leg (Chartered)
+      setDepartureTime(moment(singleLeg.departureTime).format('hh:mm A'));
+      setSta(moment(singleLeg.arrivalTime).format('hh:mm A'));
+      setTotalDistance(Math.round(singleLeg.distance).toString());
+    } else if (value !== '' && value !== 'chartered') {
+      // Handle multi-legs
+      const legIndex = parseInt(value, 10);
       const leg = legs[legIndex];
       setDepartureTime(moment(leg.departureTime).format('hh:mm A'));
-      setSta(moment(leg.arrivalTime).format('hh:mm A')); // STA unchanged
-      setTotalDistance(Math.round(leg.distance).toString()); // Round to remove decimals
+      setSta(moment(leg.arrivalTime).format('hh:mm A'));
+      setTotalDistance(Math.round(leg.distance).toString());
     } else {
+      // Clear fields if no selection
       setDepartureTime('');
       setSta('');
       setTotalDistance('');
@@ -132,6 +141,11 @@ const ETACalculator = () => {
                 Leg {index + 1}: {leg.origin} to {leg.destination}
               </option>
             ))}
+            {singleLeg && (
+              <option value="chartered">
+                Chartered: {singleLeg.origin} to {singleLeg.destination}
+              </option>
+            )}
           </select>
         </label>
       </div>

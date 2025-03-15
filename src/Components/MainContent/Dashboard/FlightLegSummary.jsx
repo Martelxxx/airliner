@@ -1,21 +1,21 @@
 // src/Components/FlightLegSummary.jsx
 import React, { useContext } from 'react';
-import { FlightPlannerContext } from '../../MainContent/FlightPlanner/FlightPlannerContext';
-import { formatTime, formatFlightTime } from '../../Services/utils';
+import { FlightPlannerContext } from '../../MainContent/FlightPlanner/FlightPlannerContext'; // Adjusted path
+import { calculateDistance, formatTime, formatFlightTime } from '../../Services/utils';
 import moment from 'moment';
 import airportData from 'airport-data';
 
-const FUEL_PRICE_PER_KG = 0.80; // $0.80/kg, adjustable
+const FUEL_PRICE_PER_KG = 0.80;
 
 const calculatePricing = (aircraft, distance) => {
-  const basePricePerKm = {
+  const basePricePerNm = {
     CRJ700: 0.1,
     'B737-8': 0.12,
     'B787-8': 0.15,
     'A350-900': 0.18,
   };
 
-  const basePrice = basePricePerKm[aircraft] * distance;
+  const basePrice = basePricePerNm[aircraft] * distance;
   return {
     economy: (basePrice * 1).toFixed(2),
     business: (basePrice * 2).toFixed(2),
@@ -38,37 +38,67 @@ const getRandomTerminalAndGate = () => {
 };
 
 const FlightLegSummary = () => {
-  const { legs, airportDetails } = useContext(FlightPlannerContext);
+  const { legs, singleLeg, airportDetails } = useContext(FlightPlannerContext);
 
-  // Function to get airport name, city, and country from ICAO
   const getAirportInfo = (icao) => {
     const airport = airportData.find(a => a.icao === icao);
+    if (!airport) {
+      console.error(`Airport data not found for ICAO: ${icao}`);
+      return {
+        name: 'Unknown Airport',
+        city: 'Unknown City',
+        country: 'Unknown Country',
+        latitude: NaN,
+        longitude: NaN,
+      };
+    }
     return {
-      name: airport ? airport.name : 'Unknown Airport',
-      city: airport ? airport.city : 'Unknown City',
-      country: airport ? airport.country : 'Unknown Country',
+      name: airport.name,
+      city: airport.city,
+      country: airport.country,
+      latitude: parseFloat(airport.latitude),
+      longitude: parseFloat(airport.longitude),
     };
   };
+
+  // Use singleLeg if present, otherwise fall back to legs
+  const displayLegs = singleLeg ? [singleLeg] : legs;
 
   return (
     <div className="flight-leg-summary">
       <h2>Flight Leg Summary</h2>
-      
-      {legs.length === 0 ? (
+      {displayLegs.length === 0 ? (
         <p>No legs available</p>
       ) : (
-        legs.map((leg, index) => {
-          const nextLeg = legs[index + 1];
+        displayLegs.map((leg, index) => {
+          const nextLeg = displayLegs[index + 1];
           const layoverTime = nextLeg ? moment(nextLeg.departureTime).diff(moment(leg.arrivalTime), 'hours', true) : 0;
-          const pricing = calculatePricing(leg.aircraft, Math.round(leg.distance));
-          const mealService = getMealService(Math.round(leg.distance));
+
+          const originInfo = getAirportInfo(leg.origin);
+          const destInfo = getAirportInfo(leg.destination);
+
+          const originLat = originInfo.latitude;
+          const originLon = originInfo.longitude;
+          const destLat = destInfo.latitude;
+          const destLon = destInfo.longitude;
+
+          if (isNaN(originLat) || isNaN(originLon) || isNaN(destLat) || isNaN(destLon)) {
+            console.error(`Invalid coordinates for leg ${index + 1}: Origin (${leg.origin}) or Destination (${leg.destination})`);
+            return (
+              <div key={index} className="leg-itinerary">
+                <h3>Leg {index + 1}</h3>
+                <p><strong>Error:</strong> Unable to calculate distance due to missing or invalid airport coordinates.</p>
+              </div>
+            );
+          }
+
+          const distanceNm = calculateDistance(originLat, originLon, destLat, destLon).toFixed(2);
+          const pricing = calculatePricing(leg.aircraft, distanceNm);
+          const mealService = getMealService(distanceNm);
           const departureTerminalGate = getRandomTerminalAndGate();
           const arrivalTerminalGate = getRandomTerminalAndGate();
           const checkInTime = moment(leg.departureTime).subtract(2, 'hours').format('hh:mm A');
           const boardingTime = moment(leg.departureTime).subtract(45, 'minutes').format('hh:mm A');
-
-          const originInfo = getAirportInfo(leg.origin);
-          const destinationInfo = getAirportInfo(leg.destination);
           const fuelCost = (leg.fuelConsumption * FUEL_PRICE_PER_KG).toFixed(2);
 
           return (
@@ -87,11 +117,11 @@ const FlightLegSummary = () => {
                   <p><strong>Scheduled Departure Time:</strong> {formatTime(leg.departureTime)}</p>
                   <p><strong>Scheduled Time of Arrival (STA):</strong> {formatTime(leg.arrivalTime)}</p>
                   <p><strong>Origin:</strong> {leg.origin} ({originInfo.name}, {originInfo.city}, {originInfo.country})</p>
-                  <p><strong>Destination:</strong> {leg.destination} ({destinationInfo.name}, {destinationInfo.city}, {destinationInfo.country})</p>
+                  <p><strong>Destination:</strong> {leg.destination} ({destInfo.name}, {destInfo.city}, {destInfo.country})</p>
                 </div>
                 <div className="column">
                   {nextLeg && <p><strong>Layover Time:</strong> {formatFlightTime(layoverTime)}</p>}
-                  <p><strong>Distance:</strong> {Math.round(leg.distance)} km</p>
+                  <p><strong>Distance:</strong> {distanceNm} NM</p>
                   <p><strong>Fuel Required:</strong> {leg.fuelConsumption} kg</p>
                   <p><strong>Fuel Cost:</strong> ${fuelCost}</p>
                   <div className="pricing">
